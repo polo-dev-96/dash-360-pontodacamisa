@@ -227,17 +227,31 @@ function isEmAtendimento(s: SessaoHelena): boolean {
   return STATUS_EM_ATENDIMENTO.includes(s.status);
 }
 
-async function computarKPIsFromCache(): Promise<KPIsTempoReal> {
-  const todasSessoes = Array.from(sessoesAtivasCache.values());
+async function computarKPIsFromCache(filtro: FiltroHelena = {}): Promise<KPIsTempoReal> {
+  let todasSessoes = Array.from(sessoesAtivasCache.values());
+
+  const [departamentos, canais] = await Promise.all([getDepartamentos(), getCanais()]);
+
+  // Aplicar filtros de equipe e canal se informados
+  if (filtro.equipe) {
+    todasSessoes = todasSessoes.filter(s => resolverNomeEquipe(departamentos, s.departmentId) === filtro.equipe);
+  }
+  if (filtro.canal) {
+    todasSessoes = todasSessoes.filter(s => resolverNomeCanal(canais, s) === filtro.canal);
+  }
+
   const emEspera = todasSessoes.filter(isEmEspera).length;
   const emAtendimento = todasSessoes.filter(isEmAtendimento).length;
 
-  const departamentos = await getDepartamentos();
   const porEquipeMap = new Map<string, number>();
+  const porCanalMap = new Map<string, number>();
 
   for (const s of todasSessoes) {
     const equipe = resolverNomeEquipe(departamentos, s.departmentId);
     porEquipeMap.set(equipe, (porEquipeMap.get(equipe) ?? 0) + 1);
+
+    const canal = resolverNomeCanal(canais, s);
+    porCanalMap.set(canal, (porCanalMap.get(canal) ?? 0) + 1);
   }
 
   return {
@@ -246,6 +260,9 @@ async function computarKPIsFromCache(): Promise<KPIsTempoReal> {
     total: emEspera + emAtendimento,
     porEquipe: Array.from(porEquipeMap.entries())
       .map(([equipe, total]) => ({ equipe, total }))
+      .sort((a, b) => b.total - a.total),
+    porCanal: Array.from(porCanalMap.entries())
+      .map(([canal, total]) => ({ canal, total }))
       .sort((a, b) => b.total - a.total),
     atualizadoEm: new Date().toISOString(),
   };
@@ -300,7 +317,7 @@ async function processarWebhook(body: any): Promise<{ type: string; data?: KPIsT
       console.log(`[Helena Service] Cache atualizado: -${sessao.id} | removido=${removido} | total=${sessoesAtivasCache.size}`);
     }
 
-    const kpis = await computarKPIsFromCache();
+    const kpis = await computarKPIsFromCache({});
     invalidateRealtimeCache();
     return { type: 'realtime', data: kpis, event: tipoEvento };
   }
@@ -417,15 +434,31 @@ async function buscarSessoesComLimite(
   return todas;
 }
 
-async function getKPIsTempoReal(): Promise<KPIsTempoReal> {
+async function getKPIsTempoReal(filtro: FiltroHelena = {}): Promise<KPIsTempoReal> {
   const agora = Date.now();
-  
+
+  // Se há filtro, computa diretamente do cache sem usar o cache global
+  const temFiltro = !!(filtro.equipe || filtro.canal);
+  if (temFiltro) {
+    if (cacheSessoesAtivasIniciado) {
+      return computarKPIsFromCache(filtro);
+    }
+    return {
+      emEspera: 0,
+      emAtendimento: 0,
+      total: 0,
+      porEquipe: [],
+      porCanal: [],
+      atualizadoEm: new Date().toISOString(),
+    };
+  }
+
   // Se o cache já foi iniciado e o TTL de realtime não expirou, retorna cache rápido
   if (cacheRealtime && agora - cacheRealtime.at < TTL_REALTIME_MS) {
     return cacheRealtime.data;
   }
 
-  // Se o cache já foi iniciado e ainda não deu tempo de sincronizar com a API novamente, 
+  // Se o cache já foi iniciado e ainda não deu tempo de sincronizar com a API novamente,
   // apenas computa a partir do que temos no cache (que foi atualizado pelos webhooks)
   if (cacheSessoesAtivasIniciado && agora - lastApiSyncAt < SYNC_INTERVAL_MS) {
     const resultado = await computarKPIsFromCache();
@@ -437,7 +470,7 @@ async function getKPIsTempoReal(): Promise<KPIsTempoReal> {
     console.log('[Helena Service] Sincronizando sessões ativas com a API...');
     const todasSessoes: SessaoHelena[] = [];
     let pagina = 1;
-    
+
     // Log para contar status
     const contadorStatus = new Map<string, number>();
 
@@ -445,13 +478,13 @@ async function getKPIsTempoReal(): Promise<KPIsTempoReal> {
     while (true) {
       const resp = await buscarPagina({}, pagina, TAMANHO_PAGINA);
       const itens = resp.items ?? [];
-      
+
       // Contar status de TODOS os itens
       for (const s of itens) {
         const status = s.status || 'DESCONHECIDO';
         contadorStatus.set(status, (contadorStatus.get(status) || 0) + 1);
       }
-      
+
       // Filtrar apenas as sessões ATIVAS
       const itensAtivos = itens.filter(isSessaoAtiva);
       todasSessoes.push(...itensAtivos);
@@ -463,7 +496,7 @@ async function getKPIsTempoReal(): Promise<KPIsTempoReal> {
       if (!resp.hasMorePages || itens.length === 0) break;
       pagina++;
     }
-    
+
     // Log detalhado dos status
     console.log('[Helena Service] 📊 Status encontrados na API:');
     for (const [status, qtd] of contadorStatus.entries()) {
@@ -493,6 +526,7 @@ async function getKPIsTempoReal(): Promise<KPIsTempoReal> {
       emAtendimento: 0,
       total: 0,
       porEquipe: [],
+      porCanal: [],
       atualizadoEm: new Date().toISOString(),
     };
   }
@@ -535,8 +569,21 @@ async function getKPIsFinalizados(filtro: FiltroHelena = {}): Promise<KPIsFinali
     buscarTodasSessoes({ ...filtro, status: 'HIDDEN' })
   ]);
 
-  const sessoes = [...sessoesCompleted, ...sessoesHidden];
+  let sessoes = [...sessoesCompleted, ...sessoesHidden];
   console.log(`[Helena CRM] Total sessões finalizadas (COMPLETED=${sessoesCompleted.length}, HIDDEN=${sessoesHidden.length}): ${sessoes.length}`);
+
+  const [departamentos, agentes, canais] = await Promise.all([getDepartamentos(), getAgentes(), getCanais()]);
+
+  // Aplicar filtros de equipe e canal se informados
+  if (filtro.equipe) {
+    sessoes = sessoes.filter(s => resolverNomeEquipe(departamentos, s.departmentId) === filtro.equipe);
+    console.log(`[Helena CRM] Filtro equipe='${filtro.equipe}': ${sessoes.length} sessões`);
+  }
+  if (filtro.canal) {
+    sessoes = sessoes.filter(s => resolverNomeCanal(canais, s) === filtro.canal);
+    console.log(`[Helena CRM] Filtro canal='${filtro.canal}': ${sessoes.length} sessões`);
+  }
+
   // DEBUG: verificar campos timeWait/timeService
   const comTimeWait = sessoes.filter(s => s.timeWait).length;
   const comTimeService = sessoes.filter(s => s.timeService).length;
@@ -574,7 +621,6 @@ async function getKPIsFinalizados(filtro: FiltroHelena = {}): Promise<KPIsFinali
   const porAgenteMap = new Map<string, number>();
   const porEquipeMap = new Map<string, number>();
 
-  const [departamentos, agentes, canais] = await Promise.all([getDepartamentos(), getAgentes(), getCanais()]);
   for (const sessao of sessoes) {
     const canal = resolverNomeCanal(canais, sessao);
     porCanalMap.set(canal, (porCanalMap.get(canal) ?? 0) + 1);

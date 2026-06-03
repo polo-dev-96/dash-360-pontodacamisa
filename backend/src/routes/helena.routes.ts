@@ -15,11 +15,13 @@ function broadcastSSE(data: object): void {
 }
 
 function getFiltroHelenaFromQuery(req: Request): FiltroHelena {
-  const { dataInicio, dataFim, status } = req.query;
+  const { dataInicio, dataFim, status, equipe, canal } = req.query;
   return {
     ...(dataInicio && { dataInicio: dataInicio as string }),
     ...(dataFim && { dataFim: dataFim as string }),
     ...(status && { status: status as StatusSessao }),
+    ...(equipe && { equipe: equipe as string }),
+    ...(canal && { canal: canal as string }),
   };
 }
 
@@ -82,10 +84,11 @@ router.post('/webhook', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/realtime', async (_req: Request, res: Response) => {
+router.get('/realtime', async (req: Request, res: Response) => {
   console.log('[Helena API] GET /realtime chamado às', new Date().toLocaleTimeString('pt-BR'));
   try {
-    const data = await helenaService.getKPIsTempoReal();
+    const filtro = getFiltroHelenaFromQuery(req);
+    const data = await helenaService.getKPIsTempoReal(filtro);
     res.json(data);
   } catch (error) {
     console.warn('[HelenaRoutes] Erro ao buscar KPIs em tempo real (token offline?):', error);
@@ -94,6 +97,7 @@ router.get('/realtime', async (_req: Request, res: Response) => {
       emAtendimento: 0,
       total: 0,
       porEquipe: [],
+      porCanal: [],
       atualizadoEm: new Date().toISOString(),
     });
   }

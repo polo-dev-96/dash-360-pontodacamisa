@@ -29,6 +29,8 @@ import {
   CheckSquare2,
   BarChart3,
   Layers,
+  Printer,
+  Filter,
 } from 'lucide-react'
 import logo from './logos/Logo Login 64x64.png'
 
@@ -65,6 +67,12 @@ function App() {
   // Filtros do Monitoramento Geral (Helena CRM)
   const [helenaDataInicio, setHelenaDataInicio] = useState<string>(hoje)
   const [helenaDataFim, setHelenaDataFim] = useState<string>(hoje)
+  const [helenaEquipeFiltro, setHelenaEquipeFiltro] = useState<string>('')
+  const [helenaCanalFiltro, setHelenaCanalFiltro] = useState<string>('')
+
+  // Filtros do Tempo Real
+  const [realtimeEquipeFiltro, setRealtimeEquipeFiltro] = useState<string>('')
+  const [realtimeCanalFiltro, setRealtimeCanalFiltro] = useState<string>('')
 
   // Filtros de Classificações Helena
   const [helenaClassDataInicio, setHelenaClassDataInicio] = useState<string>('')
@@ -113,15 +121,22 @@ function App() {
 
   // Carrega atendimentos finalizados do dia automaticamente ao abrir
   useEffect(() => {
-    fetchFinalizados(helenaDataInicio, helenaDataFim)
+    fetchFinalizados(helenaDataInicio, helenaDataFim, helenaEquipeFiltro || undefined, helenaCanalFiltro || undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const exportarPDF = () => {
+    const originalTitle = document.title
+    document.title = `Monitoramento_Geral_${helenaDataInicio}_${helenaDataFim}`
+    window.print()
+    document.title = originalTitle
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
 
       {/* ── Sidebar ──────────────────────────────────────────────── */}
-      <aside className="w-64 bg-gray-900 flex flex-col fixed inset-y-0 left-0 z-50">
+      <aside className="w-64 bg-gray-900 flex flex-col fixed inset-y-0 left-0 z-50 print:hidden">
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-700">
           <img src={logo} alt="Logo" className="w-12 h-12 object-contain flex-shrink-0 drop-shadow-lg" />
@@ -162,10 +177,10 @@ function App() {
       </aside>
 
       {/* ── Main area ────────────────────────────────────────────── */}
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 ml-64 flex flex-col min-h-screen print:ml-0">
 
         {/* Top bar */}
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-40">
+        <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-40 print:hidden">
           <div>
             <h1 className="text-xl font-bold text-gray-900">{PAGE_TITLES[activeTab]}</h1>
             <p className="text-xs text-gray-400 mt-0.5">Dashboard 360 Omni · Painel de Atendimentos</p>
@@ -177,11 +192,22 @@ function App() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto px-8 py-6">
+        <main className="flex-1 overflow-y-auto px-8 py-6 print:ml-0">
 
           {/* ── Monitoramento Geral ── */}
           {activeTab === 'monitoramento-geral' && (
             <div className="space-y-6">
+
+              {/* Cabeçalho de impressão */}
+              <div className="hidden print:block mb-4">
+                <h1 className="text-2xl font-bold text-gray-900">Monitoramento Geral</h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Dashboard 360 Omni · Painel de Atendimentos
+                  {helenaDataInicio && helenaDataFim && (
+                    <span> · Período: {format(new Date(helenaDataInicio + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR })} até {format(new Date(helenaDataFim + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                  )}
+                </p>
+              </div>
 
               {/* ── Tempo Real ── */}
               <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
@@ -189,7 +215,7 @@ function App() {
                   <div className="flex items-center gap-2">
                     <Activity className="w-5 h-5 text-red-600" />
                     <h2 className="text-base font-bold text-gray-900">Atendimentos em Tempo Real</h2>
-                    <span className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    <span className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full print:hidden">
                       <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse inline-block" />
                       Ao vivo · atualiza a cada 30s
                     </span>
@@ -201,14 +227,60 @@ function App() {
                       </span>
                     )}
                     <button
-                      onClick={fetchRealtime}
+                      onClick={() => fetchRealtime(realtimeEquipeFiltro || undefined, realtimeCanalFiltro || undefined)}
                       disabled={loadingRealtime}
-                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors print:hidden"
                       title="Atualizar agora"
                     >
                       <RefreshCw className={`w-4 h-4 text-gray-500 ${loadingRealtime ? 'animate-spin' : ''}`} />
                     </button>
                   </div>
+                </div>
+
+                {/* Filtros Tempo Real */}
+                <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200 print:hidden">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-600">Equipe:</span>
+                    <select
+                      value={realtimeEquipeFiltro}
+                      onChange={(e) => setRealtimeEquipeFiltro(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white min-w-[140px]"
+                    >
+                      <option value="">Todas</option>
+                      {realtime?.porEquipe.map((item, idx) => (
+                        <option key={idx} value={item.equipe}>{item.equipe}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <PhoneCall className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-600">Canal:</span>
+                    <select
+                      value={realtimeCanalFiltro}
+                      onChange={(e) => setRealtimeCanalFiltro(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white min-w-[140px]"
+                    >
+                      <option value="">Todos</option>
+                      {realtime?.porCanal.map((item, idx) => (
+                        <option key={idx} value={item.canal}>{item.canal}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => fetchRealtime(realtimeEquipeFiltro || undefined, realtimeCanalFiltro || undefined)}
+                    disabled={loadingRealtime}
+                    className="px-5 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    {loadingRealtime ? 'Buscando...' : 'Pesquisar'}
+                  </button>
+                  {(realtimeEquipeFiltro || realtimeCanalFiltro) && (
+                    <span className="text-xs text-gray-500 font-medium">
+                      {realtimeEquipeFiltro ? `Equipe: ${realtimeEquipeFiltro}` : ''}
+                      {realtimeEquipeFiltro && realtimeCanalFiltro ? ' · ' : ''}
+                      {realtimeCanalFiltro ? `Canal: ${realtimeCanalFiltro}` : ''}
+                    </span>
+                  )}
                 </div>
 
                 {errorRealtime ? (
@@ -300,9 +372,10 @@ function App() {
                   <h2 className="text-base font-bold text-gray-900">Atendimentos Finalizados</h2>
                 </div>
 
-                {/* Filtro de datas */}
-                <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* Filtros */}
+                <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200 print:hidden">
                   <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-gray-500" />
                     <span className="text-sm font-semibold text-gray-600">De:</span>
                     <input
                       type="date"
@@ -320,16 +393,54 @@ function App() {
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-600">Equipe:</span>
+                    <select
+                      value={helenaEquipeFiltro}
+                      onChange={(e) => setHelenaEquipeFiltro(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white min-w-[140px]"
+                    >
+                      <option value="">Todas</option>
+                      {realtime?.porEquipe.map((item, idx) => (
+                        <option key={idx} value={item.equipe}>{item.equipe}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <PhoneCall className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-600">Canal:</span>
+                    <select
+                      value={helenaCanalFiltro}
+                      onChange={(e) => setHelenaCanalFiltro(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white min-w-[140px]"
+                    >
+                      <option value="">Todos</option>
+                      {finalizados?.porCanal.map((item, idx) => (
+                        <option key={idx} value={item.canal}>{item.canal}</option>
+                      ))}
+                    </select>
+                  </div>
                   <button
-                    onClick={() => fetchFinalizados(helenaDataInicio, helenaDataFim)}
+                    onClick={() => fetchFinalizados(helenaDataInicio, helenaDataFim, helenaEquipeFiltro || undefined, helenaCanalFiltro || undefined)}
                     disabled={!helenaDataInicio || !helenaDataFim || loadingFinalizados}
                     className="px-5 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
                   >
                     {loadingFinalizados ? 'Buscando...' : 'Pesquisar'}
                   </button>
+                  <button
+                    onClick={exportarPDF}
+                    disabled={!pesquisadoFinalizados}
+                    className="px-4 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Exportar PDF
+                  </button>
                   {pesquisadoFinalizados && helenaDataInicio && helenaDataFim && (
                     <span className="text-xs text-gray-500 font-medium">
                       {format(new Date(helenaDataInicio + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR })} até {format(new Date(helenaDataFim + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                      {helenaEquipeFiltro ? ` · Equipe: ${helenaEquipeFiltro}` : ''}
+                      {helenaCanalFiltro ? ` · Canal: ${helenaCanalFiltro}` : ''}
                     </span>
                   )}
                 </div>

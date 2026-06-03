@@ -23,14 +23,18 @@ export function useHelena() {
   const fetchingRef = useRef(false);
   const visibleRef = useRef(true);
   const sseAtivoRef = useRef(false);
+  const filtroEquipeRef = useRef<string | undefined>(undefined);
+  const filtroCanalRef = useRef<string | undefined>(undefined);
 
-  const fetchRealtime = useCallback(async () => {
+  const fetchRealtime = useCallback(async (equipe?: string, canal?: string) => {
+    filtroEquipeRef.current = equipe;
+    filtroCanalRef.current = canal;
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     setLoadingRealtime(true);
     setErrorRealtime(null);
     try {
-      const data = await api.getHelenaRealtime();
+      const data = await api.getHelenaRealtime(equipe, canal);
       setRealtime(data);
     } catch (err) {
       console.error('[Helena] ❌ Erro no fetchRealtime:', err);
@@ -49,17 +53,17 @@ export function useHelena() {
         scheduleNext();
         return;
       }
-      await fetchRealtime();
+      await fetchRealtime(filtroEquipeRef.current, filtroCanalRef.current);
       scheduleNext();
     }, intervalo);
   }, [fetchRealtime]);
 
-  const fetchFinalizados = useCallback(async (dataInicio: string, dataFim: string) => {
+  const fetchFinalizados = useCallback(async (dataInicio: string, dataFim: string, equipe?: string, canal?: string) => {
     setLoadingFinalizados(true);
     setErrorFinalizados(null);
     setPesquisadoFinalizados(true);
     try {
-      const data = await api.getHelenaFinalizados(dataInicio, dataFim);
+      const data = await api.getHelenaFinalizados(dataInicio, dataFim, equipe, canal);
       setFinalizados(data);
     } catch (err) {
       setErrorFinalizados(err instanceof Error ? err.message : 'Erro ao buscar atendimentos finalizados');

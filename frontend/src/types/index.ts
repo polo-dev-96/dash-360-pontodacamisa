@@ -79,6 +79,7 @@ export interface KPIsTempoReal {
   emAtendimento: number;
   total: number;
   porEquipe: { equipe: string; total: number }[];
+  porCanal: { canal: string; total: number }[];
   atualizadoEm: string;
 }
 

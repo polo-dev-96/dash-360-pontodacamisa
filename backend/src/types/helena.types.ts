@@ -34,6 +34,7 @@ export interface KPIsTempoReal {
   emAtendimento: number;
   total: number;
   porEquipe: { equipe: string; total: number }[];
+  porCanal: { canal: string; total: number }[];
   atualizadoEm: string;
 }
 
@@ -53,6 +54,8 @@ export interface FiltroHelena {
   status?: StatusSessao;
   dataInicio?: string;
   dataFim?: string;
+  equipe?: string;
+  canal?: string;
 }
 
 export interface DepartamentoHelena {

@@ -77,14 +77,20 @@ export const api = {
     return response.json();
   },
 
-  async getHelenaRealtime(): Promise<KPIsTempoReal> {
-    const response = await fetch(`${API_URL}/helena/realtime`);
+  async getHelenaRealtime(equipe?: string, canal?: string): Promise<KPIsTempoReal> {
+    const params = new URLSearchParams();
+    if (equipe) params.append('equipe', equipe);
+    if (canal) params.append('canal', canal);
+    const query = params.toString() ? `?${params}` : '';
+    const response = await fetch(`${API_URL}/helena/realtime${query}`);
     if (!response.ok) throw new Error('Erro ao buscar KPIs em tempo real');
     return response.json();
   },
 
-  async getHelenaFinalizados(dataInicio: string, dataFim: string): Promise<KPIsFinalizadosHelena> {
+  async getHelenaFinalizados(dataInicio: string, dataFim: string, equipe?: string, canal?: string): Promise<KPIsFinalizadosHelena> {
     const params = new URLSearchParams({ dataInicio, dataFim });
+    if (equipe) params.append('equipe', equipe);
+    if (canal) params.append('canal', canal);
     const response = await fetch(`${API_URL}/helena/finalizados?${params}`);
     if (!response.ok) throw new Error('Erro ao buscar atendimentos finalizados');
     return response.json();
