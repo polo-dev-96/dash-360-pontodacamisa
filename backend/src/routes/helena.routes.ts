@@ -15,10 +15,12 @@ function broadcastSSE(data: object): void {
 }
 
 function getFiltroHelenaFromQuery(req: Request): FiltroHelena {
-  const { dataInicio, dataFim, status, equipe, canal } = req.query;
+  const { dataInicio, dataFim, startAtInicio, startAtFim, status, equipe, canal } = req.query;
   return {
     ...(dataInicio && { dataInicio: dataInicio as string }),
     ...(dataFim && { dataFim: dataFim as string }),
+    ...(startAtInicio && { startAtInicio: startAtInicio as string }),
+    ...(startAtFim && { startAtFim: startAtFim as string }),
     ...(status && { status: status as StatusSessao }),
     ...(equipe && { equipe: equipe as string }),
     ...(canal && { canal: canal as string }),

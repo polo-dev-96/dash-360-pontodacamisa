@@ -232,6 +232,32 @@ async function computarKPIsFromCache(filtro: FiltroHelena = {}): Promise<KPIsTem
 
   const [departamentos, canais] = await Promise.all([getDepartamentos(), getCanais()]);
 
+  // Aplicar filtro por data de criação (createdAt) se informado
+  if (filtro.dataInicio || filtro.dataFim) {
+    const inicio = filtro.dataInicio ? new Date(filtro.dataInicio + 'T00:00:00.000Z').getTime() : null;
+    const fim = filtro.dataFim ? new Date(filtro.dataFim + 'T23:59:59.999Z').getTime() : null;
+    todasSessoes = todasSessoes.filter(s => {
+      if (!s.createdAt) return false;
+      const ts = new Date(s.createdAt).getTime();
+      if (inicio && ts < inicio) return false;
+      if (fim && ts > fim) return false;
+      return true;
+    });
+  }
+
+  // Aplicar filtro por data de início do atendimento (startAt) se informado
+  if (filtro.startAtInicio || filtro.startAtFim) {
+    const inicio = filtro.startAtInicio ? new Date(filtro.startAtInicio + 'T00:00:00.000Z').getTime() : null;
+    const fim = filtro.startAtFim ? new Date(filtro.startAtFim + 'T23:59:59.999Z').getTime() : null;
+    todasSessoes = todasSessoes.filter(s => {
+      if (!s.startAt) return false;
+      const ts = new Date(s.startAt).getTime();
+      if (inicio && ts < inicio) return false;
+      if (fim && ts > fim) return false;
+      return true;
+    });
+  }
+
   // Aplicar filtros de equipe e canal se informados
   if (filtro.equipe) {
     todasSessoes = todasSessoes.filter(s => resolverNomeEquipe(departamentos, s.departmentId) === filtro.equipe);

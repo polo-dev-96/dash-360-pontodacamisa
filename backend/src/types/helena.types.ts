@@ -54,6 +54,8 @@ export interface FiltroHelena {
   status?: StatusSessao;
   dataInicio?: string;
   dataFim?: string;
+  startAtInicio?: string;
+  startAtFim?: string;
   equipe?: string;
   canal?: string;
 }
