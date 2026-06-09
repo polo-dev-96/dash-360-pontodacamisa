@@ -25,16 +25,31 @@ export function useHelena() {
   const sseAtivoRef = useRef(false);
   const filtroEquipeRef = useRef<string | undefined>(undefined);
   const filtroCanalRef = useRef<string | undefined>(undefined);
+  const filtroDataInicioRef = useRef<string | undefined>(undefined);
+  const filtroDataFimRef = useRef<string | undefined>(undefined);
+  const filtroStartAtInicioRef = useRef<string | undefined>(undefined);
+  const filtroStartAtFimRef = useRef<string | undefined>(undefined);
 
-  const fetchRealtime = useCallback(async (equipe?: string, canal?: string) => {
+  const fetchRealtime = useCallback(async (
+    equipe?: string,
+    canal?: string,
+    dataInicio?: string,
+    dataFim?: string,
+    startAtInicio?: string,
+    startAtFim?: string,
+  ) => {
     filtroEquipeRef.current = equipe;
     filtroCanalRef.current = canal;
+    filtroDataInicioRef.current = dataInicio;
+    filtroDataFimRef.current = dataFim;
+    filtroStartAtInicioRef.current = startAtInicio;
+    filtroStartAtFimRef.current = startAtFim;
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     setLoadingRealtime(true);
     setErrorRealtime(null);
     try {
-      const data = await api.getHelenaRealtime(equipe, canal);
+      const data = await api.getHelenaRealtime(equipe, canal, dataInicio, dataFim, startAtInicio, startAtFim);
       setRealtime(data);
     } catch (err) {
       console.error('[Helena] ❌ Erro no fetchRealtime:', err);
@@ -53,7 +68,14 @@ export function useHelena() {
         scheduleNext();
         return;
       }
-      await fetchRealtime(filtroEquipeRef.current, filtroCanalRef.current);
+      await fetchRealtime(
+        filtroEquipeRef.current,
+        filtroCanalRef.current,
+        filtroDataInicioRef.current,
+        filtroDataFimRef.current,
+        filtroStartAtInicioRef.current,
+        filtroStartAtFimRef.current,
+      );
       scheduleNext();
     }, intervalo);
   }, [fetchRealtime]);

@@ -31,6 +31,7 @@ import {
   Layers,
   Printer,
   Filter,
+  Calendar,
 } from 'lucide-react'
 import logo from './logos/Logo Login 64x64.png'
 
@@ -73,6 +74,9 @@ function App() {
   // Filtros do Tempo Real
   const [realtimeEquipeFiltro, setRealtimeEquipeFiltro] = useState<string>('')
   const [realtimeCanalFiltro, setRealtimeCanalFiltro] = useState<string>('')
+  const [realtimeDataInicio, setRealtimeDataInicio] = useState<string>(hoje)
+  const [realtimeDataFim, setRealtimeDataFim] = useState<string>(hoje)
+  const [realtimeTipoData, setRealtimeTipoData] = useState<'entrada' | 'atendimento'>('entrada')
 
   // Filtros de Classificações Helena
   const [helenaClassDataInicio, setHelenaClassDataInicio] = useState<string>('')
@@ -227,7 +231,13 @@ function App() {
                       </span>
                     )}
                     <button
-                      onClick={() => fetchRealtime(realtimeEquipeFiltro || undefined, realtimeCanalFiltro || undefined)}
+                      onClick={() => {
+                        if (realtimeTipoData === 'entrada') {
+                          fetchRealtime(realtimeEquipeFiltro || undefined, realtimeCanalFiltro || undefined, realtimeDataInicio, realtimeDataFim)
+                        } else {
+                          fetchRealtime(realtimeEquipeFiltro || undefined, realtimeCanalFiltro || undefined, undefined, undefined, realtimeDataInicio, realtimeDataFim)
+                        }
+                      }}
                       disabled={loadingRealtime}
                       className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors print:hidden"
                       title="Atualizar agora"
@@ -239,6 +249,36 @@ function App() {
 
                 {/* Filtros Tempo Real */}
                 <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200 print:hidden">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-600">Filtrar por:</span>
+                    <select
+                      value={realtimeTipoData}
+                      onChange={(e) => setRealtimeTipoData(e.target.value as 'entrada' | 'atendimento')}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
+                    >
+                      <option value="entrada">Data de entrada</option>
+                      <option value="atendimento">Data de início do atendimento</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-600">De:</span>
+                    <input
+                      type="date"
+                      value={realtimeDataInicio}
+                      onChange={(e) => setRealtimeDataInicio(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-600">Até:</span>
+                    <input
+                      type="date"
+                      value={realtimeDataFim}
+                      onChange={(e) => setRealtimeDataFim(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
+                    />
+                  </div>
                   <div className="flex items-center gap-2">
                     <Filter className="w-4 h-4 text-gray-500" />
                     <span className="text-sm font-semibold text-gray-600">Equipe:</span>
@@ -268,7 +308,13 @@ function App() {
                     </select>
                   </div>
                   <button
-                    onClick={() => fetchRealtime(realtimeEquipeFiltro || undefined, realtimeCanalFiltro || undefined)}
+                    onClick={() => {
+                      if (realtimeTipoData === 'entrada') {
+                        fetchRealtime(realtimeEquipeFiltro || undefined, realtimeCanalFiltro || undefined, realtimeDataInicio, realtimeDataFim)
+                      } else {
+                        fetchRealtime(realtimeEquipeFiltro || undefined, realtimeCanalFiltro || undefined, undefined, undefined, realtimeDataInicio, realtimeDataFim)
+                      }
+                    }}
                     disabled={loadingRealtime}
                     className="px-5 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
                   >

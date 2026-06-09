@@ -77,10 +77,21 @@ export const api = {
     return response.json();
   },
 
-  async getHelenaRealtime(equipe?: string, canal?: string): Promise<KPIsTempoReal> {
+  async getHelenaRealtime(
+    equipe?: string,
+    canal?: string,
+    dataInicio?: string,
+    dataFim?: string,
+    startAtInicio?: string,
+    startAtFim?: string,
+  ): Promise<KPIsTempoReal> {
     const params = new URLSearchParams();
     if (equipe) params.append('equipe', equipe);
     if (canal) params.append('canal', canal);
+    if (dataInicio) params.append('dataInicio', dataInicio);
+    if (dataFim) params.append('dataFim', dataFim);
+    if (startAtInicio) params.append('startAtInicio', startAtInicio);
+    if (startAtFim) params.append('startAtFim', startAtFim);
     const query = params.toString() ? `?${params}` : '';
     const response = await fetch(`${API_URL}/helena/realtime${query}`);
     if (!response.ok) throw new Error('Erro ao buscar KPIs em tempo real');
