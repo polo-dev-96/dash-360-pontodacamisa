@@ -228,9 +228,18 @@ function isEmAtendimento(s: SessaoHelena): boolean {
 }
 
 async function computarKPIsFromCache(filtro: FiltroHelena = {}): Promise<KPIsTempoReal> {
-  let todasSessoes = Array.from(sessoesAtivasCache.values());
+  const todasSessoesOriginais = Array.from(sessoesAtivasCache.values());
+  let todasSessoes = todasSessoesOriginais;
 
   const [departamentos, canais] = await Promise.all([getDepartamentos(), getCanais()]);
+
+  // Lista completa de equipes e canais (para popular os selects sempre)
+  const todasEquipesSet = new Set<string>();
+  const todosCanaisSet = new Set<string>();
+  for (const s of todasSessoesOriginais) {
+    todasEquipesSet.add(resolverNomeEquipe(departamentos, s.departmentId));
+    todosCanaisSet.add(resolverNomeCanal(canais, s));
+  }
 
   // Aplicar filtro por data de criação (createdAt) se informado
   if (filtro.dataInicio || filtro.dataFim) {
@@ -290,6 +299,8 @@ async function computarKPIsFromCache(filtro: FiltroHelena = {}): Promise<KPIsTem
     porCanal: Array.from(porCanalMap.entries())
       .map(([canal, total]) => ({ canal, total }))
       .sort((a, b) => b.total - a.total),
+    todasEquipes: Array.from(todasEquipesSet).sort(),
+    todosCanais: Array.from(todosCanaisSet).sort(),
     atualizadoEm: new Date().toISOString(),
   };
 }
@@ -475,6 +486,8 @@ async function getKPIsTempoReal(filtro: FiltroHelena = {}): Promise<KPIsTempoRea
       total: 0,
       porEquipe: [],
       porCanal: [],
+      todasEquipes: [],
+      todosCanais: [],
       atualizadoEm: new Date().toISOString(),
     };
   }
@@ -553,6 +566,8 @@ async function getKPIsTempoReal(filtro: FiltroHelena = {}): Promise<KPIsTempoRea
       total: 0,
       porEquipe: [],
       porCanal: [],
+      todasEquipes: [],
+      todosCanais: [],
       atualizadoEm: new Date().toISOString(),
     };
   }

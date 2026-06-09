@@ -80,6 +80,8 @@ export interface KPIsTempoReal {
   total: number;
   porEquipe: { equipe: string; total: number }[];
   porCanal: { canal: string; total: number }[];
+  todasEquipes: string[];
+  todosCanais: string[];
   atualizadoEm: string;
 }
 

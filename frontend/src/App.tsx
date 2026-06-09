@@ -288,8 +288,8 @@ function App() {
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white min-w-[140px]"
                     >
                       <option value="">Todas</option>
-                      {realtime?.porEquipe.map((item, idx) => (
-                        <option key={idx} value={item.equipe}>{item.equipe}</option>
+                      {realtime?.todasEquipes.map((equipe, idx) => (
+                        <option key={idx} value={equipe}>{equipe}</option>
                       ))}
                     </select>
                   </div>
@@ -302,8 +302,8 @@ function App() {
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white min-w-[140px]"
                     >
                       <option value="">Todos</option>
-                      {realtime?.porCanal.map((item, idx) => (
-                        <option key={idx} value={item.canal}>{item.canal}</option>
+                      {realtime?.todosCanais.map((canal, idx) => (
+                        <option key={idx} value={canal}>{canal}</option>
                       ))}
                     </select>
                   </div>
