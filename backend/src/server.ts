@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import helenaRoutes from './routes/helena.routes';
+import crmRoutes from './routes/crm.routes';
 import path from 'path';
 import fs from 'fs';
 
@@ -29,6 +30,7 @@ app.use(express.json());
 
 // Rotas da API
 app.use('/api/helena', helenaRoutes);
+app.use('/api/crm', crmRoutes);
 
 // Servir arquivos estáticos do Frontend em produção
 const frontendPath = path.join(__dirname, '../../frontend/dist');

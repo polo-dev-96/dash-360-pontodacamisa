@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useHelena } from './hooks/useHelena'
 import { useHelenaEquipes } from './hooks/useHelenaEquipes'
 import { useHelenaAgentes } from './hooks/useHelenaAgentes'
+import { useCRMFunil } from './hooks/useCRMFunil'
+import type { CardCRM } from './types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -48,6 +50,7 @@ function formatSeconds(totalSec: number): string {
 
 const NAV_ITEMS = [
   { id: 'monitoramento-geral',  label: 'Monitoramento Geral',  icon: Activity },
+  { id: 'funil-crm',  label: 'Funil CRM',  icon: Filter },
   { id: 'desempenho-equipes',  label: 'Desempenho Equipes',  icon: Layers },
   { id: 'desempenho-agentes',  label: 'Desempenho Agentes',  icon: BarChart3 },
   { id: 'classificacoes-helena', label: 'Classificações', icon: Tag },
@@ -56,6 +59,7 @@ const NAV_ITEMS = [
 const PAGE_TITLES: Record<string, string> = {
   'classificacoes-helena': 'Classificações',
   'monitoramento-geral':  'Monitoramento Geral',
+  'funil-crm':            'Funil CRM',
   'desempenho-agentes':   'Desempenho Agentes',
   'desempenho-equipes':   'Desempenho por Equipes',
 }
@@ -122,6 +126,17 @@ function App() {
     pesquisado: pesquisadoAgentes,
     fetchAgentes,
   } = useHelenaAgentes()
+
+  const {
+    funil,
+    loading: loadingFunil,
+    error: errorFunil,
+    minPecas,
+    setMinPecas,
+    fetchFunil,
+  } = useCRMFunil()
+
+  const [selectedCard, setSelectedCard] = useState<CardCRM | null>(null)
 
   // Carrega atendimentos finalizados do dia automaticamente ao abrir
   useEffect(() => {
@@ -1110,6 +1125,344 @@ function App() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── Funil CRM ── */}
+          {activeTab === 'funil-crm' && (
+            <div className="space-y-6">
+              <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <Filter className="w-6 h-6 text-red-600" />
+                      <h1 className="text-xl font-bold text-gray-900">Funil CRM</h1>
+                    </div>
+                    <p className="text-sm text-gray-500">Acompanhamento de oportunidades por etapa</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-500 whitespace-nowrap">Min. peças:</label>
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="Ex: 10"
+                        value={minPecas ?? ''}
+                        onChange={(e) => setMinPecas(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
+                        className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      />
+                      {minPecas !== undefined && (
+                        <button
+                          onClick={() => setMinPecas(undefined)}
+                          className="text-xs text-red-500 hover:text-red-700 underline"
+                        >
+                          Limpar
+                        </button>
+                      )}
+                    </div>
+                    {funil && (
+                      <span className="text-xs text-gray-400">
+                        Atualizado às {new Date(funil.atualizadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => fetchFunil(minPecas)}
+                      disabled={loadingFunil}
+                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors print:hidden"
+                      title="Atualizar agora"
+                    >
+                      <RefreshCw className={`w-4 h-4 text-gray-500 ${loadingFunil ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {errorFunil && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 mb-4">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errorFunil}</span>
+                  </div>
+                )}
+
+                {/* Cards de Etapas do Funil */}
+                {loadingFunil ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+                    {[...Array(8)].map((_, i) => (
+                      <div key={i} className="h-24 bg-gray-100 rounded-xl" />
+                    ))}
+                  </div>
+                ) : funil ? (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      {funil.etapas.map((etapa, idx) => {
+                        const cores = [
+                          'bg-blue-50 border-blue-200 text-blue-800',
+                          'bg-amber-50 border-amber-200 text-amber-800',
+                          'bg-purple-50 border-purple-200 text-purple-800',
+                          'bg-emerald-50 border-emerald-200 text-emerald-800',
+                          'bg-rose-50 border-rose-200 text-rose-800',
+                          'bg-orange-50 border-orange-200 text-orange-800',
+                          'bg-gray-50 border-gray-200 text-gray-800',
+                          'bg-teal-50 border-teal-200 text-teal-800',
+                        ]
+                        const cor = cores[idx % cores.length]
+                        return (
+                          <div key={etapa.id} className={`border rounded-xl p-4 ${cor}`}>
+                            <p className="text-xs font-semibold uppercase tracking-wide opacity-70">{etapa.nome}</p>
+                            <p className="text-3xl font-bold mt-1">{etapa.total}</p>
+                            <p className="text-xs mt-1 opacity-60">{etapa.tipo === 'inicio' ? 'Início' : etapa.tipo === 'final' ? 'Final' : 'Intermediário'}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Total e Cards por Responsável */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Cards por Responsável */}
+                      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Users className="w-5 h-5 text-red-600" />
+                          <h2 className="text-base font-bold text-gray-900">Cards por Responsável</h2>
+                        </div>
+                        {funil.porResponsavel.length > 0 ? (
+                          <div className="space-y-3">
+                            {funil.porResponsavel.map((resp, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-xs font-bold text-red-700">
+                                    {resp.nome.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-900">{resp.nome}</span>
+                                </div>
+                                <span className="text-sm font-bold text-gray-900">{resp.total}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-32 text-gray-400 gap-2">
+                            <AlertCircle className="w-6 h-6" />
+                            <p className="text-sm">Nenhum responsável encontrado</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Total do Pipeline */}
+                      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <CheckCircle className="w-5 h-5 text-red-600" />
+                          <h2 className="text-base font-bold text-gray-900">Resumo do Funil</h2>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                            <p className="text-sm font-semibold text-red-700 uppercase tracking-wide">Total de Cards no Pipeline</p>
+                            <p className="text-4xl font-bold text-red-800 mt-2">{funil.totalCards}</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 text-center">
+                              <p className="text-xs font-semibold text-blue-700">Início</p>
+                              <p className="text-xl font-bold text-blue-800 mt-1">
+                                {funil.etapas.filter(e => e.tipo === 'inicio').reduce((s, e) => s + e.total, 0)}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 text-center">
+                              <p className="text-xs font-semibold text-amber-700">Intermediário</p>
+                              <p className="text-xl font-bold text-amber-800 mt-1">
+                                {funil.etapas.filter(e => e.tipo === 'intermediario').reduce((s, e) => s + e.total, 0)}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
+                              <p className="text-xs font-semibold text-emerald-700">Final</p>
+                              <p className="text-xl font-bold text-emerald-800 mt-1">
+                                {funil.etapas.filter(e => e.tipo === 'final').reduce((s, e) => s + e.total, 0)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tabela de Cards */}
+                    <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                      <h2 className="text-base font-bold text-gray-900 mb-4">Detalhamento dos Cards</h2>
+                      <div className="border border-gray-200 rounded-xl overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Título</th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Etapa</th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Responsável</th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Contato</th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Atualizado</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {funil.etapas.flatMap(e => e.cards).length > 0 ? (
+                              funil.etapas.flatMap(e => e.cards).map((card, index) => (
+                                <tr
+                                  key={index}
+                                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                  onClick={() => setSelectedCard(card)}
+                                >
+                                  <td className="px-4 py-3 font-semibold text-gray-900">{card.title || '—'}</td>
+                                  <td className="px-4 py-3 text-gray-600">{card.stageName}</td>
+                                  <td className="px-4 py-3 text-gray-600">{card.responsibleName || '—'}</td>
+                                  <td className="px-4 py-3 text-gray-600">{card.contactName || '—'}</td>
+                                  <td className="px-4 py-3 text-gray-500 text-xs">{new Date(card.updatedAt).toLocaleDateString('pt-BR')}</td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">Nenhum card encontrado</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Modal de detalhes do card */}
+                    {selectedCard && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedCard(null)}>
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                          <div className="p-6 border-b border-gray-100 flex items-start justify-between">
+                            <div>
+                              <h3 className="text-lg font-bold text-gray-900">{selectedCard.title || 'Card sem título'}</h3>
+                              {selectedCard.key && <p className="text-xs text-gray-500 mt-1">{selectedCard.key}</p>}
+                            </div>
+                            <button
+                              onClick={() => setSelectedCard(null)}
+                              className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                            >
+                              <span className="text-xl leading-none">&times;</span>
+                            </button>
+                          </div>
+                          <div className="p-6 space-y-5">
+                            {selectedCard.description && (
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Descrição</p>
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedCard.description}</p>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  selectedCard.status === 'OPEN' ? 'bg-blue-100 text-blue-800' :
+                                  selectedCard.status === 'WON' ? 'bg-emerald-100 text-emerald-800' :
+                                  selectedCard.status === 'LOST' ? 'bg-red-100 text-red-800' :
+                                  selectedCard.status === 'ARCHIVED' ? 'bg-gray-100 text-gray-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {selectedCard.status === 'OPEN' ? 'Aberto' :
+                                   selectedCard.status === 'WON' ? 'Ganho' :
+                                   selectedCard.status === 'LOST' ? 'Perdido' :
+                                   selectedCard.status === 'ARCHIVED' ? 'Arquivado' :
+                                   selectedCard.status || '—'}
+                                </span>
+                              </div>
+                              {selectedCard.monetaryAmount !== undefined && selectedCard.monetaryAmount !== null && (
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Valor</p>
+                                  <p className="text-sm font-bold text-gray-900">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedCard.monetaryAmount)}
+                                  </p>
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Etapa</p>
+                                <p className="text-sm text-gray-700">{selectedCard.stageName}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Responsável</p>
+                                <p className="text-sm text-gray-700">{selectedCard.responsibleName || '—'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Contato</p>
+                                <p className="text-sm text-gray-700">{selectedCard.contactName || '—'}</p>
+                              </div>
+                              {selectedCard.number && (
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Número</p>
+                                  <p className="text-sm text-gray-700">#{selectedCard.number}</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Criado em</p>
+                                <p className="text-sm text-gray-700">{new Date(selectedCard.createdAt).toLocaleString('pt-BR')}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Atualizado em</p>
+                                <p className="text-sm text-gray-700">{new Date(selectedCard.updatedAt).toLocaleString('pt-BR')}</p>
+                              </div>
+                              {selectedCard.dueDate && (
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Vencimento</p>
+                                  <p className={`text-sm font-medium ${selectedCard.isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
+                                    {new Date(selectedCard.dueDate).toLocaleDateString('pt-BR')}
+                                    {selectedCard.isOverdue && ' (Atrasado)'}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            {selectedCard.lostReasonName && (
+                              <div className="pt-4 border-t border-gray-100">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Motivo da perda</p>
+                                <p className="text-sm text-gray-700">{selectedCard.lostReasonName}</p>
+                              </div>
+                            )}
+                            {selectedCard.tagNames && selectedCard.tagNames.length > 0 && (
+                              <div className="pt-4 border-t border-gray-100">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Tags</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedCard.tagNames.map((tag, i) => (
+                                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {selectedCard.customFields && Object.keys(selectedCard.customFields).length > 0 && (
+                              <div className="pt-4 border-t border-gray-100">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Campos customizados</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {Object.entries(selectedCard.customFields).map(([k, v]) => {
+                                    const labelMap: Record<string, string> = {
+                                      telefone: 'Telefone',
+                                      nomecliente: 'Nome do cliente',
+                                      quantidadepecas: 'Quantidade de peças',
+                                      tipocamisa: 'Tipo de camisa',
+                                      corcamisa: 'Cor da camisa',
+                                      tamanhocamisa: 'Tamanho da camisa',
+                                      valorcamisa: 'Valor da camisa',
+                                      valororcamento: 'Valor do orçamento',
+                                      modelocamisa: 'Modelo da camisa',
+                                      'n-pedido': 'Nº Pedido',
+                                    }
+                                    const label = labelMap[k.toLowerCase()] || k
+                                    const raw = String(v)
+                                    const isCurrency = k.toLowerCase().includes('valor') && !isNaN(Number(raw))
+                                    const display = isCurrency
+                                      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(raw))
+                                      : raw
+                                    return (
+                                      <div key={k} className="bg-gray-50 rounded-lg p-3">
+                                        <p className="text-xs text-gray-500">{label}</p>
+                                        <p className="text-sm text-gray-900 font-medium">{display || '—'}</p>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : null}
+              </div>
             </div>
           )}
 

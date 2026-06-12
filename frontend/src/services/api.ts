@@ -1,4 +1,4 @@
-import { KPIOverview, TimelineData, EquipeStats, AgenteStats, CanalStats, FiltroData, PicoHorarioData, ClassificacaoStats, ClassificacaoPorAgente, FiltroClassificacao, KPIsTempoReal, KPIsFinalizadosHelena, ClassificacoesHelenaResponse, AgentePerformanceHelena, EquipePerformanceHelena } from '../types';
+import { KPIOverview, TimelineData, EquipeStats, AgenteStats, CanalStats, FiltroData, PicoHorarioData, ClassificacaoStats, ClassificacaoPorAgente, FiltroClassificacao, KPIsTempoReal, KPIsFinalizadosHelena, ClassificacoesHelenaResponse, AgentePerformanceHelena, EquipePerformanceHelena, ResumoFunilCRM } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -125,6 +125,13 @@ export const api = {
     const params = new URLSearchParams({ dataInicio, dataFim });
     const response = await fetch(`${API_URL}/helena/equipes?${params}`);
     if (!response.ok) throw new Error('Erro ao buscar desempenho das equipes');
+    return response.json();
+  },
+
+  async getCRMFunil(minPecas?: number): Promise<ResumoFunilCRM> {
+    const params = minPecas !== undefined ? `?minPecas=${minPecas}` : '';
+    const response = await fetch(`${API_URL}/crm/funil${params}`);
+    if (!response.ok) throw new Error('Erro ao buscar dados do funil CRM');
     return response.json();
   },
 };
