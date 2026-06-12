@@ -154,11 +154,13 @@ async function fetchCardsByStage(stepId: string): Promise<CardCRM[]> {
   return todosCards;
 }
 
-async function getResumoFunilCRM(minPecas?: number): Promise<ResumoFunilCRM> {
-  console.log('[CRM Service] Iniciando busca do funil...', minPecas ? `(minPecas: ${minPecas})` : '');
+async function getResumoFunilCRM(minPecas?: number, etapaId?: string): Promise<ResumoFunilCRM> {
+  console.log('[CRM Service] Iniciando busca do funil...', minPecas ? `(minPecas: ${minPecas})` : '', etapaId ? `(etapa: ${etapaId})` : '');
+
+  const etapasParaBuscar = etapaId ? ETAPAS.filter((e) => e.id === etapaId) : ETAPAS;
 
   const resultados = await Promise.all(
-    ETAPAS.map(async (etapa) => {
+    etapasParaBuscar.map(async (etapa) => {
       let cards = await fetchCardsByStage(etapa.id);
       if (minPecas !== undefined && !isNaN(minPecas)) {
         cards = cards.filter((c) => {

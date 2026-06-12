@@ -7,7 +7,8 @@ router.get('/funil', async (req: Request, res: Response) => {
   console.log('[CRM API] GET /funil chamado às', new Date().toLocaleTimeString('pt-BR'));
   try {
     const minPecas = req.query.minPecas ? parseInt(req.query.minPecas as string, 10) : undefined;
-    const data = await crmService.getResumoFunilCRM(minPecas);
+    const etapa = req.query.etapa as string | undefined;
+    const data = await crmService.getResumoFunilCRM(minPecas, etapa);
     res.json(data);
   } catch (error) {
     console.error('[CRM API] Erro ao buscar funil:', error);

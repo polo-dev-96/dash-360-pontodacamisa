@@ -128,8 +128,11 @@ export const api = {
     return response.json();
   },
 
-  async getCRMFunil(minPecas?: number): Promise<ResumoFunilCRM> {
-    const params = minPecas !== undefined ? `?minPecas=${minPecas}` : '';
+  async getCRMFunil(minPecas?: number, etapa?: string): Promise<ResumoFunilCRM> {
+    const query = new URLSearchParams();
+    if (minPecas !== undefined) query.set('minPecas', String(minPecas));
+    if (etapa) query.set('etapa', etapa);
+    const params = query.toString() ? `?${query.toString()}` : '';
     const response = await fetch(`${API_URL}/crm/funil${params}`);
     if (!response.ok) throw new Error('Erro ao buscar dados do funil CRM');
     return response.json();

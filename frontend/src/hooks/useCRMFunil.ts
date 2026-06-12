@@ -8,13 +8,14 @@ export function useCRMFunil() {
   const [error, setError] = useState<string | null>(null);
   const [pesquisado, setPesquisado] = useState(false);
   const [minPecas, setMinPecas] = useState<number | undefined>(undefined);
+  const [etapa, setEtapa] = useState<string | undefined>(undefined);
 
-  const fetchFunil = useCallback(async (qtd?: number) => {
+  const fetchFunil = useCallback(async (qtd?: number, stepId?: string) => {
     setLoading(true);
     setError(null);
     setPesquisado(true);
     try {
-      const data = await api.getCRMFunil(qtd);
+      const data = await api.getCRMFunil(qtd, stepId);
       setFunil(data);
     } catch (err) {
       console.error('[CRM] Erro ao buscar funil:', err);
@@ -25,8 +26,8 @@ export function useCRMFunil() {
   }, []);
 
   useEffect(() => {
-    fetchFunil(minPecas);
-  }, [fetchFunil, minPecas]);
+    fetchFunil(minPecas, etapa);
+  }, [fetchFunil, minPecas, etapa]);
 
   return {
     funil,
@@ -35,6 +36,8 @@ export function useCRMFunil() {
     pesquisado,
     minPecas,
     setMinPecas,
+    etapa,
+    setEtapa,
     fetchFunil,
   };
 }

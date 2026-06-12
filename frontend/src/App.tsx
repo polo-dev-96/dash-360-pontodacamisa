@@ -133,6 +133,8 @@ function App() {
     error: errorFunil,
     minPecas,
     setMinPecas,
+    etapa,
+    setEtapa,
     fetchFunil,
   } = useCRMFunil()
 
@@ -1142,6 +1144,24 @@ function App() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-500 whitespace-nowrap">Etapa:</label>
+                      <select
+                        value={etapa ?? ''}
+                        onChange={(e) => setEtapa(e.target.value || undefined)}
+                        className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      >
+                        <option value="">Todas</option>
+                        <option value="defb26bb-9f51-49ee-b07f-a82ad940db0b">ATENDIMENTO EM ANDAMENTO</option>
+                        <option value="a6453a6c-2fc8-4e6f-82ad-bc25ed7b45c4">AGUARDANDO PAGAMENTO</option>
+                        <option value="21e5858b-64af-4cad-b88f-d8caecb6ccae">LAYOUT PENDENTE</option>
+                        <option value="12592f88-940a-4930-859d-f29f361d190c">PAMENTO EFETUADO</option>
+                        <option value="1708d8a4-dfca-42d6-8dd0-50cb8803af32">RECUPERAÇÃO</option>
+                        <option value="5899d71b-d68b-4fa8-80d3-5bab366d9008">RECLAMAÇÃO</option>
+                        <option value="fbbbe3dd-2ba8-4010-8b95-d9decde21a68">SEM INTERAÇÃO</option>
+                        <option value="6b518c26-b586-4c8d-a581-661ab6539ade">EXPEDIÇÃO</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-500 whitespace-nowrap">Min. peças:</label>
                       <input
                         type="number"
@@ -1151,22 +1171,22 @@ function App() {
                         onChange={(e) => setMinPecas(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
                         className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                       />
-                      {minPecas !== undefined && (
-                        <button
-                          onClick={() => setMinPecas(undefined)}
-                          className="text-xs text-red-500 hover:text-red-700 underline"
-                        >
-                          Limpar
-                        </button>
-                      )}
                     </div>
+                    {(minPecas !== undefined || etapa) && (
+                      <button
+                        onClick={() => { setMinPecas(undefined); setEtapa(undefined); }}
+                        className="text-xs text-red-500 hover:text-red-700 underline"
+                      >
+                        Limpar
+                      </button>
+                    )}
                     {funil && (
                       <span className="text-xs text-gray-400">
                         Atualizado às {new Date(funil.atualizadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                       </span>
                     )}
                     <button
-                      onClick={() => fetchFunil(minPecas)}
+                      onClick={() => fetchFunil(minPecas, etapa)}
                       disabled={loadingFunil}
                       className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors print:hidden"
                       title="Atualizar agora"
